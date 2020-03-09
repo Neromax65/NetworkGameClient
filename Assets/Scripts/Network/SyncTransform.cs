@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Network
 {
+    [RequireComponent(typeof(NetworkObject))]
     public class SyncTransform : MonoBehaviour
     {
 
@@ -32,7 +33,6 @@ namespace Network
     
         private void Awake()
         {
-            _id = NetworkIdGenerator.Generate();
             // _guid = Guid.NewGuid();
             // Debug.LogErrorFormat($"Guid: {_id}");
             _oldPos = transform.position;
@@ -43,6 +43,7 @@ namespace Network
 
         void Start()
         {
+            _id = GetComponent<NetworkObject>().networkId;
             NetworkManager.DataReceived += DataReceived;
         }
 

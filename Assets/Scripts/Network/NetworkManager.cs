@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using Network.NetworkData;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 namespace Network
 {
@@ -14,8 +16,8 @@ namespace Network
     
         private Client _client;
         [SerializeField] private GameObject[] spawnablePrefabs;
-        [SerializeField] private MainMenu _mainMenu;
-        public static Dictionary<int, NetworkIdentity> NetworkIdentities;
+        // [FormerlySerializedAs("_mainMenu")] [SerializeField] private MainMenu mainMenu;
+        public static Dictionary<int, NetworkObject> NetworkIdentities;
     
         public string PlayerName { get; private set; }
     
@@ -23,15 +25,20 @@ namespace Network
 
         private void OnValidate()
         {
-            if (_mainMenu == null)
-                _mainMenu = FindObjectOfType<MainMenu>();
+            // if (mainMenu == null)
+            //     mainMenu = FindObjectOfType<MainMenu>();
         }
 
         private void Awake()
         {
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
             Instance = this;
             _client = new Client();
-            NetworkIdentities = new Dictionary<int, NetworkIdentity>();
+            NetworkIdentities = new Dictionary<int, NetworkObject>();
             DontDestroyOnLoad(gameObject);
         }
 
@@ -40,42 +47,25 @@ namespace Network
         {
             // _client.Connect("127.0.0.1", 9000);
             _client.DataReceived += OnDataReceived;
-            _mainMenu.nameInputField.onValueChanged.AddListener(SetPlayerName);
+            // mainMenu.nameInputField.onValueChanged.AddListener(SetPlayerName);
             PlayerName = PlayerPrefs.GetString("PlayerName");
         }
 
-        private void SetPlayerName(string playerName)
+        public void Connect(string ip, int port)
         {
-            // Debug.Log("Changing name and saving player prefs");
-            PlayerName = playerName;
-            PlayerPrefs.SetString("PlayerName", PlayerName);
-            PlayerPrefs.Save();
-        }
-
-        public void Connect()
-        {
-            var address = _mainMenu.addressInputField.text.Split(':');
-            string ip = address[0];
-            int.TryParse(address[1], out int port);
             try
             {
-                _mainMenu.connectButton.interactable = false;
-                Instance._client.Connect(ip, port);
+                _client.Connect(ip, port);
             }
             catch (SocketException ex)
             {
-                Debug.LogError($"Connection error: {ex.Message}");
-                _mainMenu.connectButton.interactable = true;
-                return;
+                Debug.LogErrorFormat($"Connection error: {ex.Message}");
+                return;    
             }
-            catch (Exception ex)
+            SendDataToServer(new Data_Connect()
             {
-                Debug.LogError($"Exception: {ex.Message}");
-                _mainMenu.connectButton.interactable = true;
-                return;
-            }
-            SendDataToServer(new Data_Connect());
-            SceneManager.LoadScene(1);
+                PlayerName = PlayerName
+            });
         }
 
         void Update()
@@ -83,10 +73,9 @@ namespace Network
         
         }
 
-        public void Disconnect()
+        public static void Disconnect()
         {
-            SendDataToServer(new Data_Disconnect());
-            _client.CloseConnection();
+            Instance._client.CloseConnection();
             SceneManager.LoadScene(0);
         }
 
@@ -98,7 +87,13 @@ namespace Network
         public static GameObject SpawnGameObject(GameObject prefab, Vector3 position, Quaternion rotation)
         {
             var spawnedObject = Instantiate(prefab, position, rotation);
+            if (!Instance.spawnablePrefabs.Contains(prefab))
+            {
+                Debug.LogError($"You trying to spawn prefab to network, that is not in the SpawnablePrefabs list.");
+                return spawnedObject;
+            }
             var prefabIndex = Array.IndexOf(Instance.spawnablePrefabs, prefab);
+            spawnedObject.GetComponent<NetworkObject>().prefabIndex = prefabIndex;
             Instance._client.SendData(new Data_Spawn()
             {
                 PrefabIndex = prefabIndex,
@@ -142,9 +137,9 @@ namespace Network
             }
         }
 
-        private void OnDestroy()
+        private void OnApplicationQuit()
         {
-            DontDestroyOnLoad(this);
+            _client.CloseConnection();
         }
     }
 }

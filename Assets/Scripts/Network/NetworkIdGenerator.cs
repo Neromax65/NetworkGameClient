@@ -10,5 +10,11 @@ namespace Network
         {
             return _lastId++;
         }
+
+
+        public static void SetLastId(int value)
+        {
+            _lastId = value;
+        }
     }
 }

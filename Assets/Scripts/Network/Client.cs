@@ -44,7 +44,7 @@ namespace Network
                 return;
             }
             _logger.Log($"Successfully connected to {ip}:{port}");
-
+            NetworkIdGenerator.SetLastId(0);
         }
 
         public async Task ClientLoop()
@@ -94,16 +94,16 @@ namespace Network
             {
                 List<INetworkData> dataList = new List<INetworkData>();
                 int bytesRead = 0;
-                _logger.Log($"Deserializing data of total length: {totalDataLength}");
+                // _logger.Log($"Deserializing data of total length: {totalDataLength}");
                 do
                 {
-                    _logger.Log($"Bytes read: {bytesRead}");
+                    // _logger.Log($"Bytes read: {bytesRead}");
                     INetworkData data = MessagePackSerializer.Deserialize<INetworkData>(serializedData, out var curBytesRead);
                     dataList.Add(data);
-                    _logger.Log($"DataList length: {dataList.Count}");
+                    // _logger.Log($"DataList length: {dataList.Count}");
                     bytesRead += curBytesRead;
                     serializedData = serializedData.Skip(curBytesRead).ToArray();
-                    _logger.Log($"Left to deserialize: {totalDataLength - bytesRead}");
+                    // _logger.Log($"Left to deserialize: {totalDataLength - bytesRead}");
                 } while (bytesRead < totalDataLength);
                 return dataList;
             }
@@ -165,6 +165,8 @@ namespace Network
             if (_serverConnection == null || !_serverConnection.Connected)
                 return;
             _logger.Log("Disconnecting from server...");
+            NetworkIdGenerator.SetLastId(0);
+            SendData(new Data_Disconnect());
             _serverConnection.Shutdown(SocketShutdown.Both);
             _serverConnection.Close();
             _serverConnection = null;

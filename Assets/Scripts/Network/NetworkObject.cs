@@ -5,10 +5,10 @@ using UnityEngine.Serialization;
 
 namespace Network
 {
-    public class NetworkIdentity : MonoBehaviour
+    public class NetworkObject : MonoBehaviour
     {
         public int networkId;
-        public int prefabIndex;
+        public int prefabIndex = -1;
         public int owningPlayerId;
 
         private void Awake()
@@ -23,7 +23,7 @@ namespace Network
 
         void Register()
         {
-            
+            NetworkManager.NetworkIdentities.Add(networkId, this);
             NetworkManager.SendDataToServer(new Data_Register()
             {
                 Id = networkId,
@@ -34,7 +34,16 @@ namespace Network
 
         void Unregister()
         {
-            
+            NetworkManager.NetworkIdentities.Remove(networkId);
+            NetworkManager.SendDataToServer(new Data_Unregister()
+            {
+                Id = networkId
+            });
+        }
+
+        private void OnDestroy()
+        {
+            // Unregister();
         }
     }
 }
