@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using Network.NetworkData;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -16,19 +17,10 @@ namespace Network
     
         private Client _client;
         [SerializeField] private GameObject[] spawnablePrefabs;
-        // [FormerlySerializedAs("_mainMenu")] [SerializeField] private MainMenu mainMenu;
-        public static Dictionary<int, NetworkObject> NetworkIdentities;
+        private Dictionary<int, NetworkObject> _networkObjects;
     
         public string PlayerName { get; private set; }
     
-        public static event Action<INetworkData> DataReceived;
-
-        private void OnValidate()
-        {
-            // if (mainMenu == null)
-            //     mainMenu = FindObjectOfType<MainMenu>();
-        }
-
         private void Awake()
         {
             if (Instance != null)
@@ -38,16 +30,15 @@ namespace Network
             }
             Instance = this;
             _client = new Client();
-            NetworkIdentities = new Dictionary<int, NetworkObject>();
+            // logger = Debug.unityLogger;
+            _networkObjects = new Dictionary<int, NetworkObject>();
             DontDestroyOnLoad(gameObject);
         }
 
 
         void Start()
         {
-            // _client.Connect("127.0.0.1", 9000);
             _client.DataReceived += OnDataReceived;
-            // mainMenu.nameInputField.onValueChanged.AddListener(SetPlayerName);
             PlayerName = PlayerPrefs.GetString("PlayerName");
         }
 
@@ -68,6 +59,26 @@ namespace Network
             });
         }
 
+        public static void RegisterNetworkObject(NetworkObject networkObject)
+        {
+            if (Instance._networkObjects.ContainsKey(networkObject.networkId) || Instance._networkObjects.ContainsValue(networkObject))
+            {
+                Debug.LogError($"Trying to register network object with id: {networkObject.networkId}, that already registered.");
+                return;
+            }
+            Instance._networkObjects.Add(networkObject.networkId, networkObject);
+        }
+        
+        public static void UnregisterNetworkObject(NetworkObject networkObject)
+        {
+            if (!Instance._networkObjects.ContainsKey(networkObject.networkId) || !Instance._networkObjects.ContainsValue(networkObject))
+            {
+                Debug.LogError($"Trying to unregister network object with id: {networkObject.networkId}, that is not in registered dictionary.");
+                return;
+            }
+            Instance._networkObjects.Remove(networkObject.networkId);
+        }
+        
         void Update()
         {
         
@@ -75,13 +86,14 @@ namespace Network
 
         public static void Disconnect()
         {
+            Instance._networkObjects.Clear();
             Instance._client.CloseConnection();
             SceneManager.LoadScene(0);
         }
 
         public static void SendDataToServer(INetworkData data)
         {
-            Instance._client.SendData(data);
+            Instance._client.SendDataAdd(data);
         }
 
         public static GameObject SpawnGameObject(GameObject prefab, Vector3 position, Quaternion rotation)
@@ -94,7 +106,7 @@ namespace Network
             }
             var prefabIndex = Array.IndexOf(Instance.spawnablePrefabs, prefab);
             spawnedObject.GetComponent<NetworkObject>().prefabIndex = prefabIndex;
-            Instance._client.SendData(new Data_Spawn()
+            Instance._client.SendDataAdd(new Data_Spawn()
             {
                 PrefabIndex = prefabIndex,
                 PosX = position.x,
@@ -110,9 +122,18 @@ namespace Network
 
         private void OnDataReceived(INetworkData data)
         {
-            DataReceived?.Invoke(data);
+            // DataReceived?.Invoke(data);
             switch (data.Command)
             {
+                case Command.Position:
+                    OnPositionDataReceived(data as Data_Position);
+                    break;
+                case Command.Rotation:
+                    OnRotationDataReceived(data as Data_Rotation);
+                    break;
+                case Command.Scale:
+                    OnScaleDataReceived(data as Data_Scale);
+                    break;
                 case Command.Spawn:
                     OnSpawnDataReceived(data as Data_Spawn);
                     break;
@@ -121,6 +142,63 @@ namespace Network
             }
         }
 
+        private void OnPositionDataReceived(Data_Position data)
+        {
+            if (!_networkObjects.ContainsKey(data.Id))
+            {
+                Debug.LogError($"Could not find network object with id: {data.Id}");
+                return;
+            }
+            NetworkObject networkObject = _networkObjects[data.Id];
+            SyncTransform syncTransform = networkObject.GetComponent<SyncTransform>();
+            if (syncTransform)
+            {
+                syncTransform.OnPositionDataReceived(data);
+            }
+            else
+            {
+                networkObject.transform.position = new Vector3(data.X, data.Y, data.Z);
+            }
+        }
+
+        private void OnRotationDataReceived(Data_Rotation data)
+        {
+            if (!_networkObjects.ContainsKey(data.Id))
+            {
+                Debug.LogError($"Could not find network object with id: {data.Id}");
+                return;
+            }
+            NetworkObject networkObject = _networkObjects[data.Id];
+            SyncTransform syncTransform = networkObject.GetComponent<SyncTransform>();
+            if (syncTransform)
+            {
+                syncTransform.OnRotationDataReceived(data);
+            }
+            else
+            {
+                networkObject.transform.rotation = new Quaternion(data.X, data.Y, data.Z, data.W);
+            }
+        }
+        
+        private void OnScaleDataReceived(Data_Scale data)
+        {
+            if (!_networkObjects.ContainsKey(data.Id))
+            {
+                Debug.LogError($"Could not find network object with id: {data.Id}");
+                return;
+            }
+            NetworkObject networkObject = _networkObjects[data.Id];
+            SyncTransform syncTransform = networkObject.GetComponent<SyncTransform>();
+            if (syncTransform)
+            {
+                syncTransform.OnScaleDataReceived(data);
+            }
+            else
+            {
+                networkObject.transform.localScale = new Vector3(data.X, data.Y, data.Z);
+            }
+        }
+        
         private void OnSpawnDataReceived(Data_Spawn data)
         {
             var prefab = spawnablePrefabs[data.PrefabIndex];
@@ -131,10 +209,16 @@ namespace Network
 
         private async void FixedUpdate()
         {
-            if (_client != null)
+            if (_client?.ServerConnection != null && _client.ServerConnection.Connected)
             {
                 await _client.ClientLoop();
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (this == Instance)
+                _client.CloseConnection();
         }
 
         private void OnApplicationQuit()

@@ -18,12 +18,12 @@ namespace Network
         
         void Start()
         {
-            Register();
+            RegisterSelf();
         }
 
-        void Register()
+        void RegisterSelf()
         {
-            NetworkManager.NetworkIdentities.Add(networkId, this);
+            NetworkManager.RegisterNetworkObject(this);
             NetworkManager.SendDataToServer(new Data_Register()
             {
                 Id = networkId,
@@ -32,9 +32,9 @@ namespace Network
             });
         }
 
-        void Unregister()
+        void UnregisterSelf()
         {
-            NetworkManager.NetworkIdentities.Remove(networkId);
+            NetworkManager.UnregisterNetworkObject(this);
             NetworkManager.SendDataToServer(new Data_Unregister()
             {
                 Id = networkId

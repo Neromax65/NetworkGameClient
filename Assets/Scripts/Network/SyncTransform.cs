@@ -44,7 +44,7 @@ namespace Network
         void Start()
         {
             _id = GetComponent<NetworkObject>().networkId;
-            NetworkManager.DataReceived += DataReceived;
+            // NetworkManager.DataReceived += DataReceived;
         }
 
         private void Update()
@@ -105,7 +105,7 @@ namespace Network
             }
         }
 
-        void OnPositionDataReceived(Data_Position positionData)
+        public void OnPositionDataReceived(Data_Position positionData)
         {
             if (positionData.Id != _id)
                 return;
@@ -122,7 +122,7 @@ namespace Network
             }
         }
     
-        void OnRotationDataReceived(Data_Rotation rotationData)
+        public void OnRotationDataReceived(Data_Rotation rotationData)
         {
             if (rotationData.Id != _id)
                 return;
@@ -139,7 +139,7 @@ namespace Network
             }
         }
     
-        void OnScaleDataReceived(Data_Scale scaleData)
+        public void OnScaleDataReceived(Data_Scale scaleData)
         {
             if (scaleData.Id != _id)
                 return;

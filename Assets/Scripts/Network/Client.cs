@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 using System.Threading.Tasks;
 using MessagePack;
 using Network.NetworkData;
@@ -17,11 +18,13 @@ namespace Network
     {
         public int Id { get; private set; }
         public string PlayerName { get; private set; }
-        
-        private Socket _serverConnection;
 
-        private int _pingFailureCount;
+        public Socket ServerConnection { get; private set; }
+
+        private int _pingFailure;
         private ILogger _logger;
+
+        private List<INetworkData> _dataToSend;
 
         // public event Action<INetworkData> DataReceived;
         public event Action<INetworkData> DataReceived;
@@ -31,18 +34,19 @@ namespace Network
             _logger = Debug.unityLogger;
             
             IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-            _serverConnection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            ServerConnection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 
             _logger.Log($"Trying to connect to {ip}:{port}...");
             try
             {
-                _serverConnection.Connect(ipEndPoint);
+                ServerConnection.Connect(ipEndPoint);
             }
             catch (SocketException ex)
             {
                 _logger.LogError("Connection Error", ex.Message);
                 return;
             }
+            _dataToSend = new List<INetworkData>();
             _logger.Log($"Successfully connected to {ip}:{port}");
             NetworkIdGenerator.SetLastId(0);
         }
@@ -51,11 +55,7 @@ namespace Network
         {
             try
             {
-                if (_serverConnection == null || !_serverConnection.Connected)
-                {
-                    CloseConnection();
-                    return;
-                }
+                SendDataAll();
                 await ReceiveDataAsync();
             }
             catch (SocketException ex)
@@ -63,23 +63,32 @@ namespace Network
                 _logger.LogError("Network Error", ex.Message);
                 CloseConnection();
             }
-            catch (Exception ex)
-            {
-                _logger.LogError("Exception", ex);
-                throw;
-            }
         }
 
-        public void SendData(INetworkData data)
+        public void SendDataAdd(INetworkData data)
+        {
+            _dataToSend.Add(data);
+        }
+
+        private void SendData(INetworkData data)
         {
             byte[] serializedData = SerializeData(data);
-            _serverConnection.Send(serializedData);
+            ServerConnection.Send(serializedData);
+        }
+
+        private void SendDataAll()
+        {
+            foreach (var data in _dataToSend)
+            {
+                SendData(data);
+            }
+            _dataToSend.Clear();
         }
         
         public async Task SendDataAsync(INetworkData data)
         {
             byte[] serializedData = SerializeData(data);
-            await _serverConnection.SendAsync(new ArraySegment<byte>(serializedData), SocketFlags.None);
+            await ServerConnection.SendAsync(new ArraySegment<byte>(serializedData), SocketFlags.None);
         }
 
         private byte[] SerializeData(INetworkData data)
@@ -114,31 +123,31 @@ namespace Network
             }
         }
 
-        private bool IsAnyDataReceived()
-        {
-            if (_serverConnection.Available > 0) return true;
-            if (_pingFailureCount >= Constants.MAX_PING_FAILURE_COUNT)
-            {
-                _logger.Log($"Disconnecting from server due to not ping for {Constants.MAX_PING_FAILURE_COUNT} ticks.");
-                _serverConnection.Disconnect(false);
-            }
-            return false;
-        }
-        
         private async Task ReceiveDataAsync()
         {
-            if (IsAnyDataReceived())
-                _pingFailureCount = 0;
-            else
+            if (ServerConnection.Available == 0)
+            {
+                _pingFailure++;
+                if (_pingFailure >= Constants.MAX_PING_FAILURE_COUNT)
+                {
+                    CloseConnection();
+                }
                 return;
-                
+            }
+
+            _pingFailure = 0;
             byte[] buffer = new byte[Constants.BUFFER_SIZE];
-            var bytes = await _serverConnection.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
+            var bytes = await ServerConnection.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
             List<INetworkData> dataList = DeserializeData(buffer, bytes);
 
             foreach (var data in dataList)
             {
                 HandleCommand(data.Command, data);
+            }
+
+            if (ServerConnection != null && ServerConnection.Connected && _dataToSend.Count == 0)
+            {
+                SendDataAdd(new Data_Ping());
             }
         }
         
@@ -162,14 +171,28 @@ namespace Network
 
         public void CloseConnection()
         {
-            if (_serverConnection == null || !_serverConnection.Connected)
+            if (ServerConnection == null || !ServerConnection.Connected)
                 return;
             _logger.Log("Disconnecting from server...");
             NetworkIdGenerator.SetLastId(0);
-            SendData(new Data_Disconnect());
-            _serverConnection.Shutdown(SocketShutdown.Both);
-            _serverConnection.Close();
-            _serverConnection = null;
+            _dataToSend.Clear();
+            _dataToSend.Add(new Data_Disconnect());
+            DataReceived += TotallyCloseConnection;
+            // SendData(new Data_Disconnect());
+            // ServerConnection = null;
+            // ServerConnection.Shutdown(SocketShutdown.Both);
+            // ServerConnection.Close();
+            // ServerConnection = null;
+        }
+
+        private void TotallyCloseConnection(INetworkData data)
+        {
+            if (ServerConnection == null || !ServerConnection.Connected)
+                return;
+            DataReceived -= TotallyCloseConnection;
+            ServerConnection.Shutdown(SocketShutdown.Both);
+            ServerConnection.Close();
+            ServerConnection = null;
         }
         
     }
