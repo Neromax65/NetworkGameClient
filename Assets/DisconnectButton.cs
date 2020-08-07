@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using Network;
+﻿using Network;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,15 +18,8 @@ public class DisconnectButton : MonoBehaviour
             _disconnectButton = GetComponent<Button>();
     }
 
-    // Start is called before the first frame update
     void Start()
     {
         _disconnectButton.onClick.AddListener(NetworkManager.Disconnect);
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 }

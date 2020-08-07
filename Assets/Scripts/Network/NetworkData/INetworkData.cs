@@ -1,7 +1,10 @@
-﻿using MessagePack;
+﻿﻿using MessagePack;
 
 namespace Network.NetworkData
 {
+    /// <summary>
+    /// Network data interface
+    /// </summary>
     [Union(0, typeof(Data_Base))]
     [Union(1, typeof(Data_Ping))]
     [Union(2, typeof(Data_Position))]
@@ -14,6 +17,9 @@ namespace Network.NetworkData
     [Union(9, typeof(Data_Unregister))]
     public interface INetworkData
     {
+        /// <summary>
+        /// First byte of Network Data represents command it executes
+        /// </summary>
         [Key(0)] byte Command { get; set; }
     }
 }

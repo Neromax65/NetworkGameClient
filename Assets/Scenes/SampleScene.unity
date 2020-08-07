@@ -173,6 +173,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
+  m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -385,14 +386,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   syncPosition: 1
-  syncPosInterpolate: 1
-  syncPosFrequency: 9
+  syncPosInterpolate: 0
+  syncPosFrequency: 50
   syncRotation: 1
-  syncRotInterpolate: 1
-  syncRotFrequency: 9
+  syncRotInterpolate: 0
+  syncRotFrequency: 40
   syncScale: 1
-  syncSclInterpolate: 1
-  syncSclFrequency: 9
+  syncSclInterpolate: 0
+  syncSclFrequency: 30
 --- !u!114 &650061048
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -531,6 +532,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
+  m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []

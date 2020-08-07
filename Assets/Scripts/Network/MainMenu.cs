@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net.Sockets;
-using Network.NetworkData;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,10 +8,19 @@ namespace Network
 {
     public class MainMenu : MonoBehaviour
     {
+        /// <summary>
+        /// Player name
+        /// </summary>
         public TMP_InputField nameInputField;
     
+        /// <summary>
+        /// IP and Port address input field
+        /// </summary>
         public TMP_InputField addressInputField;
 
+        /// <summary>
+        /// Connect to server button
+        /// </summary>
         public Button connectButton;
 
         private void Start()
@@ -23,18 +30,29 @@ namespace Network
             addressInputField.onValueChanged.AddListener(SetAddress);
         }
 
+        /// <summary>
+        /// Save network address to PlayerPreferences
+        /// </summary>
+        /// <param name="address">Network address</param>
         private void SetAddress(string address)
         {
             PlayerPrefs.SetString("Address", address);
             PlayerPrefs.Save();
         }
         
+        /// <summary>
+        /// Save player name to PlayerPreferences 
+        /// </summary>
+        /// <param name="playerName">Player name</param>
         private void SetName(string playerName)
         {
             PlayerPrefs.SetString("PlayerName", playerName);
             PlayerPrefs.Save();
         }
         
+        /// <summary>
+        /// Connect to the server
+        /// </summary>
         public void Connect()
         {
             var address = addressInputField.text.Split(':');

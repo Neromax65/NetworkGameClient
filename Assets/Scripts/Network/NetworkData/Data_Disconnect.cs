@@ -1,7 +1,10 @@
-﻿using MessagePack;
+﻿﻿using MessagePack;
 
 namespace Network.NetworkData
 {
+    /// <summary>
+    /// Disconnection data class
+    /// </summary>
     [MessagePackObject]
     public class Data_Disconnect : Data_Base
     {

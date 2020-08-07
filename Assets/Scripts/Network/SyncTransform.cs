@@ -6,21 +6,46 @@ namespace Network
     [RequireComponent(typeof(NetworkObject))]
     public class SyncTransform : MonoBehaviour
     {
-
+        /// <summary>
+        /// Should the position of the object be synchronized through network
+        /// </summary>
         [SerializeField] private bool syncPosition = true;
+        /// <summary>
+        /// Smooth position synchronization
+        /// </summary>
         [SerializeField] private bool syncPosInterpolate;
+        /// <summary>
+        /// Synchronization position update frequency
+        /// </summary>
         [SerializeField, Range(1, 50)] private int syncPosFrequency = 9;
+        /// <summary>
+        /// Should the rotation of the object be synchronized through network
+        /// </summary>
         [SerializeField] private bool syncRotation;
+        /// <summary>
+        /// Smooth rotation synchronization
+        /// </summary>
         [SerializeField] private bool syncRotInterpolate;
+        /// <summary>
+        /// Synchronization rotation update frequency
+        /// </summary>
         [SerializeField, Range(1, 50)] private int syncRotFrequency = 9;
+        /// <summary>
+        /// Should the scale of the object be synchronized through network
+        /// </summary>
         [SerializeField] private bool syncScale;
+        /// <summary>
+        /// Smooth scale synchronization
+        /// </summary>
         [SerializeField] private bool syncSclInterpolate;
+        /// <summary>
+        /// Synchronization scale update frequency
+        /// </summary>
         [SerializeField, Range(1, 50)] private int syncSclFrequency = 9;
     
         private int _fixedUpdateFrameCounter;
 
         private int _id;
-        // private Guid _guid;
 
         private Vector3 _oldPos;
         private Quaternion _oldRot;
@@ -33,8 +58,6 @@ namespace Network
     
         private void Awake()
         {
-            // _guid = Guid.NewGuid();
-            // Debug.LogErrorFormat($"Guid: {_id}");
             _oldPos = transform.position;
             _oldRot = transform.rotation;
             _oldScl = transform.localScale;
@@ -44,7 +67,6 @@ namespace Network
         void Start()
         {
             _id = GetComponent<NetworkObject>().networkId;
-            // NetworkManager.DataReceived += DataReceived;
         }
 
         private void Update()
@@ -84,33 +106,11 @@ namespace Network
             }
         }
 
-        void DataReceived(INetworkData data)
-        {
-            switch (data.Command)
-            {
-                case Command.Position:
-                    if (syncPosition)
-                        OnPositionDataReceived(data as Data_Position);
-                    break;
-                case Command.Rotation:
-                    if (syncRotation)
-                        OnRotationDataReceived(data as Data_Rotation);
-                    break;
-                case Command.Scale:
-                    if (syncScale)
-                        OnScaleDataReceived(data as Data_Scale);
-                    break;
-                default:
-                    return;
-            }
-        }
-
         public void OnPositionDataReceived(Data_Position positionData)
         {
             if (positionData.Id != _id)
                 return;
-            // Debug.LogError($"Move data received: Id:{positionData.Id}, X:{positionData.X}, Y:{positionData.Y}, Z: {positionData.Z}");
-            Vector3 newPos = new Vector3(positionData.X, positionData.Y, positionData.Z);
+            Vector3 newPos = positionData.Position;
             if (syncPosInterpolate)
             {
                 _interpolatePos = newPos;
@@ -126,8 +126,7 @@ namespace Network
         {
             if (rotationData.Id != _id)
                 return;
-            // Debug.LogError($"Move data received: Id:{positionData.Id}, X:{positionData.X}, Y:{positionData.Y}, Z: {positionData.Z}");
-            var newRot = new Quaternion(rotationData.X, rotationData.Y, rotationData.Z, rotationData.W);
+            var newRot = rotationData.Rotation;
             if (syncRotInterpolate)
             {
                 _interpolateRot = newRot;
@@ -143,8 +142,7 @@ namespace Network
         {
             if (scaleData.Id != _id)
                 return;
-            // Debug.LogError($"Move data received: Id:{positionData.Id}, X:{positionData.X}, Y:{positionData.Y}, Z: {positionData.Z}");
-            Vector3 newScl = new Vector3(scaleData.X, scaleData.Y, scaleData.Z);
+            Vector3 newScl = scaleData.Scale;
             if (syncSclInterpolate)
             {
                 _interpolateScl = newScl;
@@ -169,9 +167,7 @@ namespace Network
                         NetworkManager.SendDataToServer(new Data_Position()
                         {
                             Id = _id,
-                            X = transform.position.x,
-                            Y = transform.position.y,
-                            Z = transform.position.z
+                            Position = transform.position
                         });
                         _oldPos = transform.position;
                     }
@@ -187,10 +183,7 @@ namespace Network
                         NetworkManager.SendDataToServer(new Data_Rotation()
                         {
                             Id = _id,
-                            X = transform.rotation.x,
-                            Y = transform.rotation.y,
-                            Z = transform.rotation.z,
-                            W = transform.rotation.w,
+                            Rotation = transform.rotation
                         });
                         _oldRot = transform.rotation;
                     }
@@ -206,9 +199,7 @@ namespace Network
                         NetworkManager.SendDataToServer(new Data_Scale()
                         {
                             Id = _id,
-                            X = transform.localScale.x,
-                            Y = transform.localScale.y,
-                            Z = transform.localScale.z
+                            Scale = transform.localScale
                         });
                         _oldScl = transform.localScale;
                     }

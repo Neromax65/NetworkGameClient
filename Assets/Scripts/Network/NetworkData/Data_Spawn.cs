@@ -1,26 +1,29 @@
-﻿using MessagePack;
+﻿﻿using UnityEngine;
+using MessagePack;
 
 namespace Network.NetworkData
 {
+    /// <summary>
+    /// Spawn network object data class
+    /// </summary>
     [MessagePackObject]
     public class Data_Spawn : Data_Base
     {
+        // TODO: May be send only prefabIndex, Position and Rotation can be send by another package
+        /// <summary>
+        /// Index of Unity prefab, that represent this object
+        /// </summary>
         [Key(1)] public int PrefabIndex { get; set; }
         
-        [Key(2)] public float PosX { get; set; }
-
-        [Key(3)] public float PosY { get; set; }
-
-        [Key(4)] public float PosZ { get; set; }
+        /// <summary>
+        /// X, Y, Z coordinates of object represented by Vector3
+        /// </summary>
+        [Key(2)] public Vector3 Position { get; set; }
         
-        [Key(5)] public float RotX { get; set; }
-
-        [Key(6)] public float RotY { get; set; }
-
-        [Key(7)] public float RotZ { get; set; }
-        
-        [Key(8)] public float RotW { get; set; }
-        
+        /// <summary>
+        /// X, Y, Z, W rotation values represented by Quaternion
+        /// </summary>
+        [Key(3)] public Quaternion Rotation { get; set; }
 
         public Data_Spawn()
         {

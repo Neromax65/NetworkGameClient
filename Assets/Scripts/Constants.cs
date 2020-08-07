@@ -1,8 +1,15 @@
-﻿
-    public class Constants
-    {
-        public const int MAX_PING_FAILURE_COUNT = 50;
-        public const int MAX_PENDING_CONNECTIONS = 10;
-        public const int BUFFER_SIZE = 1024;
-        public const float TIME_BETWEEN_TICK = 0.2f;
-    }
+﻿/// <summary>
+/// Game constant values
+/// </summary>
+public static class Constants
+{
+    /// <summary>
+    /// Maximum number of server ticks for not receiving any NetworkData
+    /// </summary>
+    public const int MAX_PING_FAILURE_COUNT = 50;
+    
+    /// <summary>
+    /// Buffer size for one unit of NetworkData
+    /// </summary>
+    public const int BUFFER_SIZE = 1024;
+}

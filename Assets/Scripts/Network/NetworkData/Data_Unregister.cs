@@ -1,12 +1,17 @@
-﻿using MessagePack;
+﻿﻿using MessagePack;
 
 namespace Network.NetworkData
 {
+    /// <summary>
+    /// Network unregister data class
+    /// </summary>
     [MessagePackObject]
     public class Data_Unregister : Data_Base
     {
-        [Key(1)]
-        public int Id { get; set; }
+        /// <summary>
+        /// Network identity of object
+        /// </summary>
+        [Key(1)] public int Id { get; set; }
 
         public Data_Unregister()
         {
